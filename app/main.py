@@ -81,3 +81,13 @@ def retrieve_url(short_code: str):
         if short_code == current.short_code:
             return current
     raise HTTPException(404, detail="Short code not found in DB")
+
+
+@app.put("/shorten/{short_code}")
+def update_short_code(short_code: str, url: str):
+    for i, current in enumerate(shortened_urls):
+        if short_code == current.short_code:
+            current.url = url
+            shortened_urls[i] = current
+            return shortened_urls[i]
+    raise HTTPException(404, detail="Short code not found in DB")
