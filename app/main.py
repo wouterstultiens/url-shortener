@@ -3,7 +3,7 @@ import string
 from datetime import UTC, datetime
 from itertools import count
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
@@ -24,10 +24,17 @@ class ShortenedURL(BaseModel):
 
 app = FastAPI()
 
-id_counter = count(0)
+id_counter = count(1)
 
-
-shortened_urls: list[ShortenedURL] = []
+shortened_urls: list[ShortenedURL] = [
+    ShortenedURL(
+        id=0,
+        url="hello.com/helloabc",
+        short_code="jxv834",
+        created_at=datetime.now(tz=UTC),
+        updated_at=datetime.now(tz=UTC),
+    )
+]
 
 
 @app.get("/")
@@ -66,3 +73,11 @@ def shorten(payload: ShortenRequest):
 
     # Return object
     return shortened_url
+
+
+@app.get("/shorten/{short_code}")
+def retrieve_url(short_code: str):
+    for current in shortened_urls:
+        if short_code == current.short_code:
+            return current
+    raise HTTPException(404, detail="Short code not found in DB")
