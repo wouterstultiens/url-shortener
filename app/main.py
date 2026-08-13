@@ -1,4 +1,10 @@
 from fastapi import FastAPI
+from pydantic import BaseModel
+
+
+class URL(BaseModel):
+    url: str
+
 
 app = FastAPI()
 
@@ -8,6 +14,6 @@ def test_root():
     return {"Project": "URL shortener"}
 
 
-@app.get("/shorten/{url}")
-def shorten(url: str):
-    return {"short_url": url[:-3]}
+@app.post("/shorten/")
+def shorten(url: URL):
+    return url
