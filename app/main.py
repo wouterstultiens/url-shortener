@@ -27,6 +27,9 @@ app = FastAPI()
 id_counter = count(0)
 
 
+shortened_urls: list[ShortenedURL] = []
+
+
 @app.get("/")
 def test_root():
     return {"Project": "URL shortener"}
@@ -50,10 +53,16 @@ def shorten(payload: ShortenRequest):
     updated_at = now
 
     # Create object
-    return ShortenedURL(
+    shortened_url = ShortenedURL(
         id=id,
         url=payload.url,
         short_code=short_code,
         created_at=created_at,
         updated_at=updated_at,
     )
+
+    # Write to DB
+    shortened_urls.append(shortened_url)
+
+    # Return object
+    return shortened_url
