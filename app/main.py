@@ -5,4 +5,9 @@ app = FastAPI()
 
 @app.get("/")
 def test_root():
-    return {"Project": "Url shortener"}
+    return {"Project": "URL shortener"}
+
+
+@app.get("/shorten/{url}")
+def shorten(url: str):
+    return {"short_url": url[:-3]}
