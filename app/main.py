@@ -101,11 +101,20 @@ def retrieve_url(short_code: ShortCode):
 
 
 @app.put("/shorten/{short_code}")
-def update_short_code(short_code: ShortCode, payload: ShortenRequest):
+def update_url(short_code: ShortCode, payload: ShortenRequest):
     for i, current in enumerate(shortened_urls):
         if short_code == current.short_code:
             current.url = payload.url
             current.updated_at = datetime.now(tz=UTC)
             shortened_urls[i] = current
             return shortened_urls[i]
+    raise HTTPException(404, detail="Short code not found in DB")
+
+
+@app.delete("/shorten/{short_code}", status_code=204)
+def delete_url(short_code: ShortCode):
+    for i, current in enumerate(shortened_urls):
+        if short_code == current.short_code:
+            del shortened_urls[i]
+            return {"ok": True}
     raise HTTPException(404, detail="Short code not found in DB")
