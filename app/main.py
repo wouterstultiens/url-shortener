@@ -10,6 +10,7 @@ from pydantic import (
     AfterValidator,
     BaseModel,
     ConfigDict,
+    Field,
     HttpUrl,
 )
 from pydantic.alias_generators import to_camel
@@ -37,6 +38,7 @@ class ShortenedURL(BaseModel):
     short_code: ShortCode
     created_at: datetime
     updated_at: datetime
+    access_count: Annotated[int, Field(default=0)]
 
 
 app = FastAPI()
@@ -96,6 +98,7 @@ def shorten(payload: ShortenRequest):
 def retrieve_url(short_code: ShortCode):
     for current in shortened_urls:
         if short_code == current.short_code:
+            current.access_count += 1
             return current
     raise HTTPException(404, detail="Short code not found in DB")
 
@@ -117,4 +120,12 @@ def delete_url(short_code: ShortCode):
         if short_code == current.short_code:
             del shortened_urls[i]
             return {"ok": True}
+    raise HTTPException(404, detail="Short code not found in DB")
+
+
+@app.get("/shorten/{short_code}/stats")
+def retrieve_url_stats(short_code: ShortCode):
+    for current in shortened_urls:
+        if short_code == current.short_code:
+            return current
     raise HTTPException(404, detail="Short code not found in DB")
