@@ -1,15 +1,32 @@
 import random
+import re
 import string
 from datetime import UTC, datetime
 from itertools import count
+from typing import Annotated
 
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, ValidationError
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    HttpUrl,
+)
 from pydantic.alias_generators import to_camel
 
 
+def is_short_code_format(short_code: str) -> str:
+    short_code_regex = r"[A-Za-z]{3}[0-9]{3}"
+    if not re.fullmatch(short_code_regex, short_code):
+        raise ValueError("Invalid ShortCode format")
+    return short_code
+
+
+ShortCode = Annotated[str, AfterValidator(is_short_code_format)]
+
+
 class ShortenRequest(BaseModel):
-    url: str
+    url: HttpUrl
 
 
 class ShortenedURL(BaseModel):
@@ -17,7 +34,7 @@ class ShortenedURL(BaseModel):
 
     id: int
     url: HttpUrl
-    short_code: str = Field(min_length=6, max_length=6)
+    short_code: ShortCode
     created_at: datetime
     updated_at: datetime
 
@@ -44,12 +61,6 @@ def test_root():
 
 @app.post("/shorten/", status_code=201)
 def shorten(payload: ShortenRequest):
-    try:
-        request = payload.url.lower()
-        url = HttpUrl(request)
-    except ValidationError:
-        raise HTTPException(400, "Invalid URL")
-
     # Assign and increment id
     id = next(id_counter)
 
@@ -68,7 +79,7 @@ def shorten(payload: ShortenRequest):
     # Create object
     shortened_url = ShortenedURL(
         id=id,
-        url=url,
+        url=payload.url,
         short_code=short_code,
         created_at=created_at,
         updated_at=updated_at,
@@ -82,7 +93,7 @@ def shorten(payload: ShortenRequest):
 
 
 @app.get("/shorten/{short_code}")
-def retrieve_url(short_code: str):
+def retrieve_url(short_code: ShortCode):
     for current in shortened_urls:
         if short_code == current.short_code:
             return current
@@ -90,10 +101,10 @@ def retrieve_url(short_code: str):
 
 
 @app.put("/shorten/{short_code}")
-def update_short_code(short_code: str, url: str):
+def update_short_code(short_code: ShortCode, payload: ShortenRequest):
     for i, current in enumerate(shortened_urls):
         if short_code == current.short_code:
-            current.url = url
+            current.url = payload.url
             shortened_urls[i] = current
             return shortened_urls[i]
     raise HTTPException(404, detail="Short code not found in DB")
