@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from itertools import count
 
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, ValidationError
 from pydantic.alias_generators import to_camel
 
 
@@ -16,7 +16,7 @@ class ShortenedURL(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel)
 
     id: int
-    url: str
+    url: HttpUrl
     short_code: str = Field(min_length=6, max_length=6)
     created_at: datetime
     updated_at: datetime
@@ -29,7 +29,7 @@ id_counter = count(1)
 shortened_urls: list[ShortenedURL] = [
     ShortenedURL(
         id=0,
-        url="hello.com/helloabc",
+        url=HttpUrl("https://hello.com/helloabc"),
         short_code="jxv834",
         created_at=datetime.now(tz=UTC),
         updated_at=datetime.now(tz=UTC),
@@ -44,6 +44,12 @@ def test_root():
 
 @app.post("/shorten/", status_code=201)
 def shorten(payload: ShortenRequest):
+    try:
+        request = payload.url.lower()
+        url = HttpUrl(request)
+    except ValidationError:
+        raise HTTPException(400, "Invalid URL")
+
     # Assign and increment id
     id = next(id_counter)
 
@@ -62,7 +68,7 @@ def shorten(payload: ShortenRequest):
     # Create object
     shortened_url = ShortenedURL(
         id=id,
-        url=payload.url,
+        url=url,
         short_code=short_code,
         created_at=created_at,
         updated_at=updated_at,
