@@ -105,6 +105,7 @@ def update_short_code(short_code: ShortCode, payload: ShortenRequest):
     for i, current in enumerate(shortened_urls):
         if short_code == current.short_code:
             current.url = payload.url
+            current.updated_at = datetime.now(tz=UTC)
             shortened_urls[i] = current
             return shortened_urls[i]
     raise HTTPException(404, detail="Short code not found in DB")
