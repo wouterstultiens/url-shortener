@@ -10,7 +10,6 @@ from pydantic import (
     AfterValidator,
     BaseModel,
     ConfigDict,
-    Field,
     HttpUrl,
 )
 from pydantic.alias_generators import to_camel
@@ -38,20 +37,24 @@ class ShortenedURL(BaseModel):
     short_code: ShortCode
     created_at: datetime
     updated_at: datetime
-    access_count: Annotated[int, Field(default=0)]
+
+
+class ShortenedURLStats(ShortenedURL):
+    access_count: int = 0
 
 
 app = FastAPI()
 
 id_counter = count(1)
 
-shortened_urls: list[ShortenedURL] = [
-    ShortenedURL(
+shortened_urls: list[ShortenedURLStats] = [
+    ShortenedURLStats(
         id=0,
         url=HttpUrl("https://hello.com/helloabc"),
         short_code="jxv834",
         created_at=datetime.now(tz=UTC),
         updated_at=datetime.now(tz=UTC),
+        access_count=3,
     )
 ]
 
@@ -61,7 +64,7 @@ def test_root():
     return {"Project": "URL shortener"}
 
 
-@app.post("/shorten/", status_code=201)
+@app.post("/shorten/", response_model=ShortenedURL, status_code=201)
 def shorten(payload: ShortenRequest):
     # Assign and increment id
     id = next(id_counter)
@@ -79,7 +82,7 @@ def shorten(payload: ShortenRequest):
     updated_at = now
 
     # Create object
-    shortened_url = ShortenedURL(
+    shortened_url = ShortenedURLStats(
         id=id,
         url=payload.url,
         short_code=short_code,
@@ -94,7 +97,7 @@ def shorten(payload: ShortenRequest):
     return shortened_url
 
 
-@app.get("/shorten/{short_code}")
+@app.get("/shorten/{short_code}", response_model=ShortenedURL)
 def retrieve_url(short_code: ShortCode):
     for current in shortened_urls:
         if short_code == current.short_code:
@@ -103,7 +106,7 @@ def retrieve_url(short_code: ShortCode):
     raise HTTPException(404, detail="Short code not found in DB")
 
 
-@app.put("/shorten/{short_code}")
+@app.put("/shorten/{short_code}", response_model=ShortenedURL)
 def update_url(short_code: ShortCode, payload: ShortenRequest):
     for i, current in enumerate(shortened_urls):
         if short_code == current.short_code:
@@ -123,7 +126,7 @@ def delete_url(short_code: ShortCode):
     raise HTTPException(404, detail="Short code not found in DB")
 
 
-@app.get("/shorten/{short_code}/stats")
+@app.get("/shorten/{short_code}/stats", response_model=ShortenedURLStats)
 def retrieve_url_stats(short_code: ShortCode):
     for current in shortened_urls:
         if short_code == current.short_code:
